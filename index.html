@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>weblift — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #fbfaf2;
+    --card: #ffffff;
+    --text: #0c1615;
+    --text-soft: rgba(12,22,21,0.55);
+    --text-muted: rgba(12,22,21,0.4);
+    --brand: #1A2238;
+    --brand-dark: #0f1525;
+    --brand-soft: rgba(255,255,255,0.06);
+    --brand-active: rgba(255,255,255,0.1);
+    --mint: #47C6B9;
+    --mint-soft: rgba(71,198,185,0.12);
+    --line: #e6eced;
+    --line-soft: #f0ede4;
+  }
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter Tight', system-ui, -apple-system, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+  }
+
+  /* ==================== LOGIN OVERLAY ==================== */
+  .login-overlay {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    z-index: 1000;
+  }
+  .login-card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    padding: 2.5rem;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 12px 48px rgba(12,22,21,0.06);
+  }
+  .login-brand {
+    line-height: 1.1;
+    margin-bottom: 2rem;
+  }
+  .login-label {
+    display: block;
+    font-size: 0.7rem;
+    letter-spacing: 1.5px;
+    color: var(--text-soft);
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+  }
+  .login-name {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--brand);
+  }
+  .login-card h2 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: -0.6px;
+    margin-bottom: 0.4rem;
+  }
+  .login-card > p { color: var(--text-soft); margin-bottom: 1.5rem; font-size: 0.93rem; }
+  .login-field { margin-bottom: 1rem; }
+  .login-field label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-soft);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 0.4rem;
+  }
+  .login-field input {
+    width: 100%;
+    padding: 0.85rem 1rem;
+    border: 1.5px solid var(--line);
+    border-radius: 0.5rem;
+    font-family: inherit;
+    font-size: 0.95rem;
+    background: var(--card);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .login-field input:focus { border-color: var(--brand); }
+  .login-error {
+    color: #d63031;
+    font-size: 0.85rem;
+    margin-bottom: 1rem;
+    min-height: 0;
+  }
+  .login-error:empty { display: none; }
+  .login-btn {
+    width: 100%;
+    padding: 1rem;
+    border: none;
+    border-radius: 0.6rem;
+    background: var(--brand);
+    color: white;
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .login-btn:hover { background: var(--brand-dark); }
+  .login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ==================== APP LAYOUT ==================== */
+  #app { display: flex; min-height: 100vh; }
+
+  /* ==================== SIDEBAR ==================== */
+  .sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    min-height: 100vh;
+    background: var(--brand);
+    color: rgba(255,255,255,0.85);
+    display: flex;
+    flex-direction: column;
+    padding: 1.75rem 0 1.25rem;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+  }
+  .sidebar-logo { padding: 0 1.5rem 2rem; line-height: 1.2; }
+  .sidebar-logo-label {
+    display: block; font-size: 0.68rem; letter-spacing: 1.5px;
+    color: rgba(255,255,255,0.4); text-transform: uppercase;
+    margin-bottom: 0.15rem; font-weight: 500;
+  }
+  .sidebar-logo-name {
+    font-size: 1.45rem; font-weight: 700; letter-spacing: -0.5px; color: white;
+  }
+  .sidebar-nav {
+    display: flex; flex-direction: column; gap: 0.2rem;
+    padding: 0 0.75rem; flex: 1;
+  }
+  .nav-item {
+    display: flex; align-items: center; gap: 0.8rem;
+    padding: 0.7rem 0.85rem; border-radius: 0.5rem;
+    color: rgba(255,255,255,0.55); font-size: 0.92rem; font-weight: 500;
+    cursor: pointer; transition: all 0.2s;
+    background: transparent; border: none; font-family: inherit;
+    text-align: left; width: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; opacity: 0.8; }
+  .nav-item:hover { background: var(--brand-soft); color: rgba(255,255,255,0.9); }
+  .nav-item.active { background: var(--brand-active); color: white; }
+  .nav-item.active svg { opacity: 1; }
+  .sidebar-footer {
+    padding: 1.25rem 1.5rem 0;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    margin-top: 0.75rem;
+  }
+  .sidebar-email {
+    font-size: 0.75rem; color: rgba(255,255,255,0.35); margin-bottom: 0.5rem;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .sidebar-logout {
+    background: none; border: none; font-family: inherit;
+    color: rgba(255,255,255,0.5); cursor: pointer;
+    display: flex; align-items: center; gap: 0.55rem;
+    padding: 0.4rem 0; font-size: 0.85rem; font-weight: 500;
+    transition: color 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .sidebar-logout:hover { color: white; }
+  .sidebar-logout svg { width: 15px; height: 15px; }
+
+  /* ==================== MAIN ==================== */
+  .main {
+    flex: 1; padding: 2.5rem 3rem; overflow-y: auto; min-width: 0;
+  }
+  @media (max-width: 900px) { .main { padding: 1.5rem; } }
+  .page-header { margin-bottom: 2rem; }
+  .page-header-row {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    margin-bottom: 2rem; gap: 1rem; flex-wrap: wrap;
+  }
+  .page-title {
+    font-size: 1.75rem; font-weight: 700; letter-spacing: -0.7px;
+    margin-bottom: 0.25rem; line-height: 1.2;
+  }
+  .page-subtitle { font-size: 0.95rem; color: var(--text-soft); }
+  .page-action {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 0.5rem; padding: 0.7rem 1rem;
+    font-family: inherit; font-size: 0.88rem; font-weight: 500;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem;
+    color: var(--text); transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .page-action:hover { border-color: var(--brand); }
+  .page-action svg { width: 15px; height: 15px; }
+
+  /* ==================== STAT CARDS ==================== */
+  .stats-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 1rem; margin-bottom: 1.25rem;
+  }
+  @media (max-width: 1100px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 540px) { .stats-grid { grid-template-columns: 1fr; } }
+  .stat-card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 0.7rem; padding: 1.5rem;
+  }
+  .stat-label {
+    font-size: 0.68rem; letter-spacing: 1.5px; color: var(--text-soft);
+    text-transform: uppercase; font-weight: 600; margin-bottom: 0.85rem;
+  }
+  .stat-value {
+    font-size: 2.5rem; font-weight: 700; letter-spacing: -1.5px;
+    line-height: 1; margin-bottom: 0.55rem;
+  }
+  .stat-caption {
+    font-size: 0.82rem; color: var(--mint); font-weight: 500;
+  }
+
+  /* ==================== CONTENT GRID ==================== */
+  .content-grid {
+    display: grid; grid-template-columns: 1.3fr 1fr; gap: 1rem;
+  }
+  @media (max-width: 1100px) { .content-grid { grid-template-columns: 1fr; } }
+  .content-card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 0.7rem; padding: 1.5rem; overflow: hidden;
+  }
+  .content-card-title {
+    font-size: 0.68rem; letter-spacing: 1.5px; color: var(--text-soft);
+    text-transform: uppercase; font-weight: 600; margin-bottom: 1.25rem;
+  }
+  .empty-state {
+    padding: 2rem 0; text-align: center;
+    color: var(--text-soft); font-size: 0.93rem;
+  }
+
+  /* ==================== TABLE ==================== */
+  .table-wrap { overflow-x: auto; }
+  .table { width: 100%; border-collapse: collapse; }
+  .table th {
+    text-align: left; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.8px;
+    text-transform: uppercase; color: var(--text-muted);
+    padding: 0.6rem 0; border-bottom: 1px solid var(--line);
+  }
+  .table td {
+    padding: 0.95rem 0; font-size: 0.92rem;
+    border-bottom: 1px solid var(--line-soft); color: var(--text);
+  }
+  .table tr:last-child td { border-bottom: none; }
+  .table td.muted { color: var(--text-soft); }
+
+  /* ==================== BAR CHART ==================== */
+  .bar-row {
+    display: grid; grid-template-columns: 130px 1fr 30px;
+    gap: 0.85rem; align-items: center; padding: 0.6rem 0;
+  }
+  .bar-label {
+    font-size: 0.88rem; color: var(--text); text-align: right; font-weight: 500;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .bar-track {
+    height: 8px; background: var(--line-soft);
+    border-radius: 4px; overflow: hidden;
+  }
+  .bar-fill {
+    height: 100%; background: var(--mint);
+    border-radius: 4px; transition: width 0.6s cubic-bezier(.16,1,.3,1);
+  }
+  .bar-value {
+    font-size: 0.88rem; font-weight: 600; color: var(--text); text-align: right;
+  }
+
+  /* ==================== FILTERS + LEADS TABLE ==================== */
+  .filters-row {
+    display: grid; grid-template-columns: repeat(4, 1fr) auto;
+    gap: 1rem; align-items: end; margin-bottom: 1.5rem;
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 0.7rem; padding: 1.25rem;
+  }
+  @media (max-width: 900px) { .filters-row { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 540px) { .filters-row { grid-template-columns: 1fr; } }
+  .filter-field { min-width: 0; }
+  .filter-field label {
+    display: block; font-size: 0.68rem; font-weight: 600; color: var(--text-soft);
+    letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 0.4rem;
+  }
+  .filter-input {
+    width: 100%; padding: 0.7rem 0.85rem;
+    border: 1px solid var(--line); border-radius: 0.45rem;
+    font-family: inherit; font-size: 0.9rem;
+    background: var(--card); color: var(--text);
+    outline: none; transition: border-color 0.2s;
+  }
+  .filter-input:focus { border-color: var(--brand); }
+  .filter-input::placeholder { color: var(--text-muted); }
+  select.filter-input {
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%230c1615' stroke-width='2' stroke-linecap='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 0.85rem center;
+    padding-right: 1.8rem; cursor: pointer;
+  }
+  .filter-btn {
+    padding: 0.7rem 1.5rem; border: none; border-radius: 0.45rem;
+    background: var(--brand); color: white;
+    font-family: inherit; font-size: 0.9rem; font-weight: 500;
+    cursor: pointer; transition: background 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .filter-btn:hover { background: var(--brand-dark); }
+
+  .leads-table-card { padding: 0; }
+  .leads-table { width: 100%; border-collapse: collapse; }
+  .leads-table th {
+    text-align: left; font-size: 0.68rem; font-weight: 600;
+    letter-spacing: 0.8px; text-transform: uppercase; color: var(--text-muted);
+    padding: 1.1rem 1.5rem; border-bottom: 1px solid var(--line); background: var(--bg);
+  }
+  .leads-table th:first-child, .leads-table td:first-child { padding-left: 1.75rem; }
+  .leads-table th:last-child, .leads-table td:last-child { padding-right: 1.75rem; }
+  .leads-table td {
+    padding: 1.1rem 1.5rem; font-size: 0.92rem;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .leads-table tr:last-child td { border-bottom: none; }
+  .leads-table tr:hover td { background: rgba(71,198,185,0.04); }
+
+  .details-btn {
+    padding: 0.45rem 0.95rem; border: 1px solid var(--line);
+    border-radius: 999px; background: var(--card);
+    font-family: inherit; font-size: 0.82rem; font-weight: 500;
+    cursor: pointer; color: var(--text); transition: all 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .details-btn:hover { border-color: var(--brand); background: var(--brand); color: white; }
+
+  .status-badge {
+    display: inline-block; padding: 0.3rem 0.7rem;
+    border-radius: 999px; font-size: 0.7rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap;
+  }
+  .status-neu { background: var(--mint-soft); color: var(--mint); }
+  .status-bearbeitung { background: rgba(241,184,45,0.15); color: #b8860b; }
+  .status-termin { background: rgba(33,150,243,0.12); color: #1976d2; }
+  .status-abgeschlossen { background: rgba(76,175,80,0.14); color: #2e7d32; }
+  .status-verloren { background: rgba(214,48,49,0.12); color: #c0392b; }
+
+  /* ==================== MODAL ==================== */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(12,22,21,0.4);
+    backdrop-filter: blur(4px);
+    align-items: flex-start;
+    justify-content: center;
+    z-index: 2000;
+    padding: 2rem 1rem;
+    overflow-y: auto;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-card {
+    background: var(--card); border-radius: 1rem;
+    width: 100%; max-width: 640px;
+    padding: 2rem;
+    position: relative;
+    box-shadow: 0 24px 64px rgba(12,22,21,0.15);
+    margin: auto 0;
+  }
+  .modal-close {
+    position: absolute; top: 1rem; right: 1rem;
+    width: 36px; height: 36px; border: none;
+    background: transparent; cursor: pointer;
+    color: var(--text-soft); font-size: 1.5rem; line-height: 1;
+    border-radius: 50%; transition: all 0.2s;
+  }
+  .modal-close:hover { background: var(--line-soft); color: var(--text); }
+  .modal-header { margin-bottom: 1.5rem; padding-right: 2rem; }
+  .modal-header h2 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.6px; margin-bottom: 0.3rem; }
+  .modal-header p { color: var(--text-soft); font-size: 0.93rem; margin-bottom: 0.2rem; }
+  .modal-header p.muted { font-size: 0.82rem; color: var(--text-muted); }
+  .modal-section { margin-bottom: 1.5rem; }
+  .modal-section h3 {
+    font-size: 0.7rem; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--text-soft); font-weight: 600; margin-bottom: 0.85rem;
+  }
+  .modal-section label {
+    display: block; font-size: 0.7rem; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--text-soft);
+    font-weight: 600; margin-bottom: 0.55rem;
+  }
+  .modal-section select, .modal-section textarea {
+    width: 100%; padding: 0.7rem 0.85rem;
+    border: 1.5px solid var(--line); border-radius: 0.5rem;
+    font-family: inherit; font-size: 0.93rem;
+    background: var(--card); color: var(--text);
+    outline: none; transition: border-color 0.2s;
+  }
+  .modal-section select:focus, .modal-section textarea:focus { border-color: var(--brand); }
+  .modal-section textarea { resize: vertical; min-height: 100px; line-height: 1.5; }
+  .modal-section select {
+    appearance: none; -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%230c1615' stroke-width='2' stroke-linecap='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 0.85rem center;
+    padding-right: 1.8rem; cursor: pointer;
+  }
+  .modal-dl {
+    display: grid; grid-template-columns: 140px 1fr;
+    gap: 0.7rem 1rem; font-size: 0.92rem;
+  }
+  .modal-dl dt {
+    color: var(--text-soft); font-weight: 500;
+  }
+  .modal-dl dd { color: var(--text); word-break: break-word; }
+  .modal-dl a { color: var(--mint); text-decoration: underline; text-underline-offset: 2px; }
+  .voice-text {
+    background: var(--bg); border-radius: 0.5rem;
+    padding: 1rem; font-size: 0.93rem; line-height: 1.55;
+    border: 1px solid var(--line); white-space: pre-wrap;
+  }
+  .voice-empty { color: var(--text-soft); font-style: italic; font-size: 0.9rem; }
+
+  /* ==================== PAGE SWITCHING ==================== */
+  .page { display: none; animation: pageIn .3s cubic-bezier(.16,1,.3,1); }
+  .page.active { display: block; }
+  @keyframes pageIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  @media (max-width: 768px) {
+    #app { flex-direction: column; }
+    .sidebar { width: 100%; height: auto; min-height: 0; flex-direction: row; padding: 1rem; align-items: center; position: relative; }
+    .sidebar-logo { padding: 0; flex: 1; }
+    .sidebar-nav { flex-direction: row; padding: 0; gap: 0.25rem; flex: none; }
+    .nav-item { padding: 0.5rem 0.75rem; font-size: 0; }
+    .nav-item svg { width: 20px; height: 20px; }
+    .sidebar-footer { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ==================== LOGIN OVERLAY ==================== -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-card">
+    <div class="login-brand">
+      <span class="login-label">Admin</span>
+      <span class="login-name">weblift</span>
+    </div>
+    <h2>Willkommen zurück</h2>
+    <p>Melde dich an, um zum Dashboard zu gelangen.</p>
+    <form id="loginForm">
+      <div class="login-field">
+        <label>E-Mail</label>
+        <input type="email" id="loginEmail" autocomplete="email" required>
+      </div>
+      <div class="login-field">
+        <label>Passwort</label>
+        <input type="password" id="loginPassword" autocomplete="current-password" required>
+      </div>
+      <div class="login-error" id="loginError"></div>
+      <button type="submit" class="login-btn" id="loginBtn">Anmelden</button>
+    </form>
+  </div>
+</div>
+
+<!-- ==================== APP ==================== -->
+<div id="app" style="display:none">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <span class="sidebar-logo-label">Admin</span>
+      <span class="sidebar-logo-name">weblift</span>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-page="dashboard" onclick="showPage('dashboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Dashboard
+      </button>
+      <button class="nav-item" data-page="leads" onclick="showPage('leads')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Leads
+      </button>
+      <button class="nav-item" data-page="quiz" onclick="showPage('quiz')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Quiz Editor
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-email" id="sidebarEmail">—</div>
+      <button class="sidebar-logout" onclick="doLogout()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Abmelden
+      </button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-subtitle">Übersicht aller Anfragen und Stats</p>
+      </div>
+      <div id="dashboardContent"></div>
+    </div>
+
+    <!-- LEADS -->
+    <div class="page" id="page-leads">
+      <div class="page-header-row">
+        <div>
+          <h1 class="page-title">Leads</h1>
+          <p class="page-subtitle" id="leadsCount">Lade…</p>
+        </div>
+        <button class="page-action" onclick="exportCSV()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          CSV Export
+        </button>
+      </div>
+
+      <div class="filters-row">
+        <div class="filter-field">
+          <label>Branche</label>
+          <select class="filter-input" id="filterBranche" onchange="renderLeadsTable()">
+            <option value="">Alle Branchen</option>
+            <option value="Personenmarke">Personenmarke</option>
+            <option value="Agentur/SaaS">Agentur / SaaS</option>
+            <option value="Anwalt/Steuerberater/Arzt">Anwalt / Arzt</option>
+            <option value="KMU">KMU</option>
+            <option value="Sonstiges">Sonstiges</option>
+          </select>
+        </div>
+        <div class="filter-field">
+          <label>Status</label>
+          <select class="filter-input" id="filterStatus" onchange="renderLeadsTable()">
+            <option value="">Alle Status</option>
+            <option value="neu">Neu</option>
+            <option value="bearbeitung">In Bearbeitung</option>
+            <option value="termin">Termin</option>
+            <option value="abgeschlossen">Abgeschlossen</option>
+            <option value="verloren">Verloren</option>
+          </select>
+        </div>
+        <div class="filter-field">
+          <label>Datum von</label>
+          <input class="filter-input" type="date" id="filterDateFrom" onchange="renderLeadsTable()">
+        </div>
+        <div class="filter-field">
+          <label>Suche</label>
+          <input class="filter-input" type="text" id="filterSearch" placeholder="Name oder E-Mail" oninput="renderLeadsTable()">
+        </div>
+        <button class="filter-btn" onclick="renderLeadsTable()">Filtern</button>
+      </div>
+
+      <div class="content-card leads-table-card">
+        <div id="leadsTableContainer"></div>
+      </div>
+    </div>
+
+    <!-- QUIZ EDITOR -->
+    <div class="page" id="page-quiz">
+      <div class="page-header">
+        <h1 class="page-title">Quiz Editor</h1>
+        <p class="page-subtitle">Fragen und Antworten des Quiz bearbeiten</p>
+      </div>
+      <div class="content-card">
+        <div class="empty-state">Quiz Editor — kommt in Phase 4 (Hardcoded im Quiz-HTML aktuell)</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ==================== LEAD DETAIL MODAL ==================== -->
+<div class="modal-overlay" id="leadModal" onclick="if(event.target===this) closeModal()">
+  <div class="modal-card">
+    <button class="modal-close" onclick="closeModal()" aria-label="Schließen">×</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+const SUPABASE_URL = 'https://lwjyhsdlqpohnttxoacr.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx3anloc2RscXBvaG50dHhvYWNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNjE4MTgsImV4cCI6MjA5MzgzNzgxOH0.c5EgX-Inzcb07WjeT0VXDmv7hAqoo5UGCvLf2ZeVQEA';
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let currentLeads = [];
+
+// ==================== AUTH ====================
+async function init() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if(session) {
+    onSignedIn(session);
+  } else {
+    showLogin();
+  }
+  supabase.auth.onAuthStateChange((event, session) => {
+    if(event === 'SIGNED_IN' && session) onSignedIn(session);
+    else if(event === 'SIGNED_OUT') showLogin();
+  });
+}
+
+function showLogin() {
+  document.getElementById('loginOverlay').style.display = 'flex';
+  document.getElementById('app').style.display = 'none';
+}
+
+async function onSignedIn(session) {
+  document.getElementById('loginOverlay').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('sidebarEmail').textContent = session.user.email;
+  await loadLeads();
+  subscribeToChanges();
+}
+
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  const btn = document.getElementById('loginBtn');
+  errEl.textContent = '';
+  btn.disabled = true;
+  btn.textContent = 'Anmelden…';
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  btn.disabled = false;
+  btn.textContent = 'Anmelden';
+  if(error) {
+    errEl.textContent = error.message === 'Invalid login credentials'
+      ? 'E-Mail oder Passwort falsch.'
+      : 'Login fehlgeschlagen: ' + error.message;
+  }
+});
+
+window.doLogout = async () => {
+  await supabase.auth.signOut();
+};
+
+// ==================== DATA ====================
+async function loadLeads() {
+  const { data, error } = await supabase
+    .from('leads')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if(error) {
+    console.error('[admin] Load leads error:', error);
+    return;
+  }
+  currentLeads = data || [];
+  renderDashboard();
+  renderLeadsTable();
+}
+
+async function updateLead(id, updates) {
+  const { error } = await supabase
+    .from('leads')
+    .update(updates)
+    .eq('id', id);
+  if(error) {
+    console.error('[admin] Update lead error:', error);
+    alert('Fehler beim Speichern: ' + error.message);
+    return false;
+  }
+  const lead = currentLeads.find(l => l.id === id);
+  if(lead) Object.assign(lead, updates);
+  renderDashboard();
+  renderLeadsTable();
+  return true;
+}
+
+function subscribeToChanges() {
+  supabase
+    .channel('leads-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => {
+      loadLeads();
+    })
+    .subscribe();
+}
+
+// ==================== RENDER: DASHBOARD ====================
+function renderDashboard() {
+  const total = currentLeads.length;
+  const now = Date.now();
+  const dayAgo = now - 24*60*60*1000;
+  const weekAgo = now - 7*24*60*60*1000;
+  const monthAgo = now - 30*24*60*60*1000;
+  const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+
+  const todayCount = currentLeads.filter(l => new Date(l.created_at) >= todayStart).length;
+  const weekCount = currentLeads.filter(l => new Date(l.created_at).getTime() >= weekAgo).length;
+  const monthCount = currentLeads.filter(l => new Date(l.created_at).getTime() >= monthAgo).length;
+
+  const branchCounts = {};
+  currentLeads.forEach(l => {
+    if(l.branche) branchCounts[l.branche] = (branchCounts[l.branche] || 0) + 1;
+  });
+  const topBranches = Object.entries(branchCounts).sort((a,b) => b[1]-a[1]).slice(0,5);
+  const maxCount = topBranches[0]?.[1] || 1;
+
+  const last10 = currentLeads.slice(0, 10);
+
+  let h = `
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Leads gesamt</div>
+        <div class="stat-value">${total}</div>
+        <div class="stat-caption">${todayCount} heute</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Diese Woche</div>
+        <div class="stat-value">${weekCount}</div>
+        <div class="stat-caption">${monthCount} diesen Monat</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Page Views</div>
+        <div class="stat-value">—</div>
+        <div class="stat-caption">Tracking später</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Conversion Rate</div>
+        <div class="stat-value">—</div>
+        <div class="stat-caption">Tracking später</div>
+      </div>
+    </div>
+    <div class="content-grid">
+      <div class="content-card">
+        <div class="content-card-title">Letzte 10 Leads</div>
+        ${last10.length === 0 ? '<div class="empty-state">Noch keine Anfragen — sobald jemand das Quiz ausfüllt, taucht es hier auf.</div>' : `
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>Name</th><th>E-Mail</th><th>Branche</th><th>Datum</th></tr></thead>
+              <tbody>
+                ${last10.map(l => `
+                  <tr style="cursor:pointer" onclick="openLead('${l.id}')">
+                    <td>${escapeHtml(l.name)}</td>
+                    <td class="muted">${escapeHtml(l.email)}</td>
+                    <td>${escapeHtml(l.branche || '—')}</td>
+                    <td class="muted">${formatDate(l.created_at)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `}
+      </div>
+      <div class="content-card">
+        <div class="content-card-title">Top Branchen</div>
+        ${topBranches.length === 0 ? '<div class="empty-state">Noch keine Daten.</div>' : topBranches.map(([branche, count]) => `
+          <div class="bar-row">
+            <div class="bar-label">${escapeHtml(branche)}</div>
+            <div class="bar-track"><div class="bar-fill" style="width:${(count/maxCount)*100}%"></div></div>
+            <div class="bar-value">${count}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+  document.getElementById('dashboardContent').innerHTML = h;
+}
+
+// ==================== RENDER: LEADS TABLE ====================
+function applyFilters(leads) {
+  const branche = document.getElementById('filterBranche')?.value || '';
+  const status = document.getElementById('filterStatus')?.value || '';
+  const dateFrom = document.getElementById('filterDateFrom')?.value || '';
+  const search = (document.getElementById('filterSearch')?.value || '').toLowerCase();
+  return leads.filter(l => {
+    if(branche && l.branche !== branche) return false;
+    if(status && l.status !== status) return false;
+    if(dateFrom && new Date(l.created_at) < new Date(dateFrom)) return false;
+    if(search && !((l.name||'') + ' ' + (l.email||'')).toLowerCase().includes(search)) return false;
+    return true;
+  });
+}
+
+window.renderLeadsTable = function() {
+  const filtered = applyFilters(currentLeads);
+  const total = currentLeads.length;
+  document.getElementById('leadsCount').textContent =
+    filtered.length === total
+      ? `${total} Lead${total === 1 ? '' : 's'} insgesamt`
+      : `${filtered.length} von ${total} Lead${total === 1 ? '' : 's'} (gefiltert)`;
+  const html = filtered.length === 0 ? `
+    <div class="empty-state" style="padding:3rem">${total === 0 ? 'Noch keine Anfragen.' : 'Keine Anfragen entsprechen den Filtern.'}</div>
+  ` : `
+    <div class="table-wrap">
+      <table class="leads-table">
+        <thead>
+          <tr><th>Name</th><th>E-Mail</th><th>Branche</th><th>Budget</th><th>Status</th><th>Datum</th><th>Aktionen</th></tr>
+        </thead>
+        <tbody>
+          ${filtered.map(l => `
+            <tr>
+              <td>${escapeHtml(l.name)}</td>
+              <td>${escapeHtml(l.email)}</td>
+              <td>${escapeHtml(l.branche || '—')}</td>
+              <td>${escapeHtml(formatBudget(l.budget))}</td>
+              <td>${statusBadge(l.status)}</td>
+              <td>${formatDate(l.created_at)}</td>
+              <td><button class="details-btn" onclick="openLead('${l.id}')">Details</button></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+  document.getElementById('leadsTableContainer').innerHTML = html;
+};
+
+// ==================== MODAL ====================
+window.openLead = (id) => {
+  const lead = currentLeads.find(l => l.id === id);
+  if(!lead) return;
+  const ziele = (lead.ziele || []).join(', ') || '—';
+  const branche = (lead.branche || '—') + (lead.branche_sonstiges ? ' (' + lead.branche_sonstiges + ')' : '');
+  const vorhaben = (lead.vorhaben || '—') + (lead.vorhaben_sonstiges ? ' (' + lead.vorhaben_sonstiges + ')' : '');
+
+  let voiceHtml = '';
+  if(lead.voice_message_url) {
+    if(lead.voice_message_type === 'video') {
+      voiceHtml = `<video controls src="${escapeAttr(lead.voice_message_url)}" style="width:100%;max-height:280px;border-radius:0.5rem;background:#000"></video>`;
+    } else {
+      voiceHtml = `<audio controls src="${escapeAttr(lead.voice_message_url)}" style="width:100%"></audio>`;
+    }
+    if(lead.voice_message_duration) {
+      voiceHtml += `<p style="font-size:0.82rem;color:var(--text-soft);margin-top:0.5rem">Dauer: ${lead.voice_message_duration}s</p>`;
+    }
+  } else if(lead.voice_message_text) {
+    voiceHtml = `<div class="voice-text">${escapeHtml(lead.voice_message_text)}</div>`;
+  } else {
+    voiceHtml = `<div class="voice-empty">Keine Nachricht hinterlassen.</div>`;
+  }
+
+  document.getElementById('modalContent').innerHTML = `
+    <div class="modal-header">
+      <h2>${escapeHtml(lead.name)}</h2>
+      <p>${escapeHtml(lead.email)}${lead.telefon ? ' · ' + escapeHtml(lead.telefon) : ''}</p>
+      <p class="muted">Anfrage vom ${formatDate(lead.created_at)}</p>
+    </div>
+
+    <div class="modal-section">
+      <label>Status</label>
+      <select id="modalStatus" onchange="changeStatus('${lead.id}', this.value)">
+        <option value="neu" ${lead.status === 'neu' ? 'selected' : ''}>Neu</option>
+        <option value="bearbeitung" ${lead.status === 'bearbeitung' ? 'selected' : ''}>In Bearbeitung</option>
+        <option value="termin" ${lead.status === 'termin' ? 'selected' : ''}>Termin vereinbart</option>
+        <option value="abgeschlossen" ${lead.status === 'abgeschlossen' ? 'selected' : ''}>Abgeschlossen</option>
+        <option value="verloren" ${lead.status === 'verloren' ? 'selected' : ''}>Verloren</option>
+      </select>
+    </div>
+
+    <div class="modal-section">
+      <h3>Anfrage-Details</h3>
+      <dl class="modal-dl">
+        <dt>Aktuelle Website</dt><dd>${lead.website_url ? `<a href="${escapeAttr(lead.website_url)}" target="_blank" rel="noopener">${escapeHtml(lead.website_url)}</a>` : '<em style="color:var(--text-muted)">Noch keine</em>'}</dd>
+        <dt>Branche</dt><dd>${escapeHtml(branche)}</dd>
+        <dt>Vorhaben</dt><dd>${escapeHtml(vorhaben)}</dd>
+        <dt>Wichtig</dt><dd>${escapeHtml(ziele)}</dd>
+        <dt>Go-Live</dt><dd>${escapeHtml(lead.go_live || '—')}</dd>
+        <dt>Budget</dt><dd>${escapeHtml(formatBudget(lead.budget))}</dd>
+        ${lead.referrer_url ? `<dt>Kam von</dt><dd><a href="${escapeAttr(lead.referrer_url)}" target="_blank" rel="noopener">${escapeHtml(lead.referrer_url)}</a></dd>` : ''}
+      </dl>
+    </div>
+
+    <div class="modal-section">
+      <h3>Persönliche Nachricht</h3>
+      ${voiceHtml}
+    </div>
+
+    <div class="modal-section">
+      <label>Notizen</label>
+      <textarea id="modalNotes" placeholder="Notizen zu diesem Lead…">${escapeHtml(lead.notes || '')}</textarea>
+      <button class="filter-btn" id="saveNotesBtn" onclick="saveNotes('${lead.id}')" style="margin-top:0.6rem">Notizen speichern</button>
+    </div>
+  `;
+  document.getElementById('leadModal').classList.add('open');
+};
+
+window.closeModal = () => {
+  document.getElementById('leadModal').classList.remove('open');
+};
+
+window.changeStatus = async (id, status) => {
+  await updateLead(id, { status });
+};
+
+window.saveNotes = async (id) => {
+  const notes = document.getElementById('modalNotes').value;
+  const ok = await updateLead(id, { notes });
+  if(ok) {
+    const btn = document.getElementById('saveNotesBtn');
+    const orig = btn.textContent;
+    btn.textContent = '✓ Gespeichert';
+    setTimeout(() => { btn.textContent = orig; }, 2000);
+  }
+};
+
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape') closeModal();
+});
+
+// ==================== CSV EXPORT ====================
+window.exportCSV = () => {
+  const filtered = applyFilters(currentLeads);
+  const headers = ['Datum','Name','E-Mail','Telefon','Branche','Branche-Sonstiges','Vorhaben','Vorhaben-Sonstiges','Ziele','Go-Live','Budget','Website','Status','Notizen','Voice-Text','Voice-URL','Referrer'];
+  const rows = filtered.map(l => [
+    formatDate(l.created_at), l.name||'', l.email||'', l.telefon||'',
+    l.branche||'', l.branche_sonstiges||'',
+    l.vorhaben||'', l.vorhaben_sonstiges||'',
+    (l.ziele||[]).join('; '),
+    l.go_live||'', l.budget||'', l.website_url||'',
+    l.status||'', l.notes||'', l.voice_message_text||'', l.voice_message_url||'',
+    l.referrer_url||''
+  ]);
+  const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'weblift-leads-' + new Date().toISOString().split('T')[0] + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+// ==================== HELPERS ====================
+function escapeHtml(str) {
+  if(str === null || str === undefined) return '';
+  return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function escapeAttr(str) {
+  if(str === null || str === undefined) return '';
+  return String(str).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function formatDate(ts) {
+  if(!ts) return '—';
+  const d = new Date(ts);
+  return d.toLocaleDateString('de-AT', { day:'2-digit', month:'2-digit', year:'2-digit' }) +
+    ' · ' + d.toLocaleTimeString('de-AT', { hour:'2-digit', minute:'2-digit' });
+}
+function formatBudget(b) {
+  const map = {'<5k':'< 5.000 €','5-8k':'5.000–8.000 €','8-15k':'8.000–15.000 €','15-20k':'15.000–20.000 €','>20k':'über 20.000 €'};
+  return map[b] || b || '—';
+}
+function statusBadge(status) {
+  const labels = {neu:'Neu', bearbeitung:'In Bearbeitung', termin:'Termin', abgeschlossen:'Abgeschlossen', verloren:'Verloren'};
+  return `<span class="status-badge status-${status||'neu'}">${labels[status]||status||'Neu'}</span>`;
+}
+
+window.showPage = function(name){
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.page === name));
+  document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + name));
+};
+
+// ==================== START ====================
+init();
+</script>
+</body>
+</html>
+</parameter>
+</invoke>
