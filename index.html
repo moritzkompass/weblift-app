@@ -1000,6 +1000,22 @@ window.openLead = (id) => {
       </dl>
     </div>
 
+    ${(lead.utm_source || lead.utm_medium || lead.utm_campaign || lead.gclid || lead.fbclid || lead.referrer_hostname) ? `
+    <div class="modal-section">
+      <h3>Quelle</h3>
+      <dl class="modal-dl">
+        ${lead.utm_source ? `<dt>Source</dt><dd><strong>${escapeHtml(lead.utm_source)}</strong></dd>` : ''}
+        ${lead.utm_medium ? `<dt>Medium</dt><dd>${escapeHtml(lead.utm_medium)}</dd>` : ''}
+        ${lead.utm_campaign ? `<dt>Kampagne</dt><dd>${escapeHtml(lead.utm_campaign)}</dd>` : ''}
+        ${lead.utm_term ? `<dt>Keyword</dt><dd>${escapeHtml(lead.utm_term)}</dd>` : ''}
+        ${lead.utm_content ? `<dt>Content</dt><dd>${escapeHtml(lead.utm_content)}</dd>` : ''}
+        ${lead.referrer_hostname ? `<dt>Domain</dt><dd>${escapeHtml(lead.referrer_hostname)}</dd>` : ''}
+        ${lead.gclid ? `<dt>Google Click-ID</dt><dd style="font-family:monospace;font-size:0.8rem;word-break:break-all">${escapeHtml(lead.gclid)}</dd>` : ''}
+        ${lead.fbclid ? `<dt>Meta Click-ID</dt><dd style="font-family:monospace;font-size:0.8rem;word-break:break-all">${escapeHtml(lead.fbclid)}</dd>` : ''}
+      </dl>
+    </div>
+    ` : ''}
+
     <div class="modal-section">
       <h3>Persönliche Nachricht</h3>
       ${voiceHtml}
@@ -1040,7 +1056,7 @@ document.addEventListener('keydown', e => {
 // ==================== CSV EXPORT ====================
 window.exportCSV = () => {
   const filtered = applyFilters(currentLeads);
-  const headers = ['Datum','Name','E-Mail','Telefon','Branche','Branche-Sonstiges','Vorhaben','Vorhaben-Sonstiges','Ziele','Go-Live','Budget','Website','Status','Notizen','Voice-Text','Voice-URL','Referrer'];
+  const headers = ['Datum','Name','E-Mail','Telefon','Branche','Branche-Sonstiges','Vorhaben','Vorhaben-Sonstiges','Ziele','Go-Live','Budget','Website','Status','Notizen','Voice-Text','Voice-URL','Referrer','UTM-Source','UTM-Medium','UTM-Campaign','UTM-Term','UTM-Content','GCLID','FBCLID','Referrer-Hostname'];
   const rows = filtered.map(l => [
     formatDate(l.created_at), l.name||'', l.email||'', l.telefon||'',
     l.branche||'', l.branche_sonstiges||'',
@@ -1048,7 +1064,9 @@ window.exportCSV = () => {
     (l.ziele||[]).join('; '),
     l.go_live||'', l.budget||'', l.website_url||'',
     l.status||'', l.notes||'', l.voice_message_text||'', l.voice_message_url||'',
-    l.referrer_url||''
+    l.referrer_url||'',
+    l.utm_source||'', l.utm_medium||'', l.utm_campaign||'', l.utm_term||'', l.utm_content||'',
+    l.gclid||'', l.fbclid||'', l.referrer_hostname||''
   ]);
   const csv = [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
   const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
