@@ -257,6 +257,45 @@
     color: var(--text-soft); font-size: 0.93rem;
   }
 
+  /* ==================== ANALYTICS ==================== */
+  .analytics-funnel { display: flex; flex-direction: column; gap: 0.55rem; }
+  .funnel-row {
+    display: grid; grid-template-columns: 140px 1fr 80px 70px;
+    align-items: center; gap: 0.85rem;
+    font-size: 0.86rem;
+  }
+  .funnel-row .label { color: var(--text-soft); }
+  .funnel-row .label strong { color: var(--text); }
+  .funnel-row .bar {
+    height: 22px; border-radius: 4px;
+    background: var(--mint); position: relative;
+    transition: width 0.6s cubic-bezier(.16,1,.3,1);
+    min-width: 2px;
+  }
+  .funnel-row .bar.dim { background: var(--mint); opacity: 0.55; }
+  .funnel-row .count {
+    text-align: right; font-variant-numeric: tabular-nums;
+    font-weight: 600; color: var(--text);
+  }
+  .funnel-row .pct {
+    text-align: right; font-variant-numeric: tabular-nums;
+    font-size: 0.78rem; color: var(--text-soft);
+  }
+  .funnel-row .pct.bad { color: #d63031; }
+  .funnel-row .pct.good { color: var(--mint); }
+  .source-table { width: 100%; }
+  .source-table td {
+    padding: 0.55rem 0; font-size: 0.88rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .source-table tr:last-child td { border-bottom: none; }
+  .source-table .src-name { font-weight: 500; }
+  .source-table .num {
+    text-align: right; font-variant-numeric: tabular-nums;
+    color: var(--text-soft); font-size: 0.86rem;
+  }
+  .source-table .num.highlight { color: var(--mint); font-weight: 600; }
+
   /* ==================== TABLE ==================== */
   .table-wrap { overflow-x: auto; }
   .table { width: 100%; border-collapse: collapse; }
@@ -625,6 +664,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
         Quiz Editor
       </button>
+      <button class="nav-item" data-page="analytics" onclick="showPage('analytics')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Analytics
+      </button>
     </nav>
     <div class="sidebar-footer">
       <div class="sidebar-email" id="sidebarEmail">—</div>
@@ -704,6 +747,15 @@
         <p class="page-subtitle">Fragen und Antworten des Quiz bearbeiten. Änderungen sind sofort live.</p>
       </div>
       <div id="quizStepsContainer"></div>
+    </div>
+
+    <!-- ANALYTICS -->
+    <div class="page" id="page-analytics">
+      <div class="page-header">
+        <h1 class="page-title">Analytics</h1>
+        <p class="page-subtitle">Anonyme Nutzungsstatistiken — keine Cookies, keine IP-Speicherung.</p>
+      </div>
+      <div id="analyticsContent"></div>
     </div>
   </main>
 </div>
@@ -1108,7 +1160,162 @@ window.showPage = function(name){
   document.querySelectorAll('.nav-item').forEach(b => b.classList.toggle('active', b.dataset.page === name));
   document.querySelectorAll('.page').forEach(p => p.classList.toggle('active', p.id === 'page-' + name));
   if(name === 'quiz') loadQuizSteps();
+  if(name === 'analytics') loadAnalytics();
 };
+
+// ==================== ANALYTICS ====================
+const STEP_LABELS = {
+  page_view: 'Landing Page',
+  quiz_start: 'Quiz gestartet',
+  website: '1. Website',
+  branche: '2. Branche',
+  vorhaben: '3. Vorhaben',
+  ziele: '4. Ziele',
+  timing: '5. Timing',
+  budget: '6. Budget',
+  voice: '7. Vision',
+  kontakt: '8. Kontakt',
+  submit: '✓ Anfrage gesendet'
+};
+const STEP_ORDER = ['page_view','quiz_start','website','branche','vorhaben','ziele','timing','budget','voice','kontakt','submit'];
+
+async function loadAnalytics(){
+  const target = document.getElementById('analyticsContent');
+  target.innerHTML = '<div class="content-card"><div class="empty-state">Lade Analytics…</div></div>';
+
+  // Pull all events from last 30 days, then aggregate client-side (volume is low)
+  const { data: events, error } = await supabase
+    .from('analytics_events')
+    .select('session_id, event_type, step_key, step_index, utm_source, created_at')
+    .gte('created_at', new Date(Date.now() - 30*24*60*60*1000).toISOString())
+    .limit(50000);
+
+  if(error){
+    target.innerHTML = `<div class="content-card"><div class="empty-state">Fehler beim Laden: ${escapeHtml(error.message)}</div></div>`;
+    return;
+  }
+
+  const all = events || [];
+  const now = Date.now();
+  const cutoff7d = now - 7*24*60*60*1000;
+  const events7d = all.filter(e => new Date(e.created_at).getTime() >= cutoff7d);
+
+  // === COUNTERS ===
+  function uniqueSessions(arr, type) {
+    const set = new Set();
+    arr.filter(e => e.event_type === type).forEach(e => set.add(e.session_id));
+    return set.size;
+  }
+  const visits7d = uniqueSessions(events7d, 'page_view');
+  const starts7d = uniqueSessions(events7d, 'quiz_start');
+  const submits7d = uniqueSessions(events7d, 'submit');
+  const visits30d = uniqueSessions(all, 'page_view');
+  const submits30d = uniqueSessions(all, 'submit');
+  const convRate7d = starts7d > 0 ? Math.round((submits7d / starts7d) * 100) : 0;
+  const convRate30dAll = visits30d > 0 ? ((submits30d / visits30d) * 100).toFixed(1) : '0';
+
+  // === FUNNEL (last 7d) ===
+  const funnelMap = {};
+  events7d.forEach(e => {
+    const key = e.event_type === 'step_view' ? e.step_key : e.event_type;
+    if(!key) return;
+    if(!funnelMap[key]) funnelMap[key] = new Set();
+    funnelMap[key].add(e.session_id);
+  });
+  const funnelData = STEP_ORDER.map(key => ({
+    key, label: STEP_LABELS[key] || key, count: funnelMap[key]?.size || 0
+  }));
+  const funnelMax = Math.max(...funnelData.map(d => d.count), 1);
+
+  // === SOURCES (last 30d) ===
+  const sourceMap = {};
+  all.forEach(e => {
+    const src = e.utm_source || '(direkt)';
+    if(!sourceMap[src]) sourceMap[src] = { visits: new Set(), starts: new Set(), submits: new Set() };
+    if(e.event_type === 'page_view') sourceMap[src].visits.add(e.session_id);
+    if(e.event_type === 'quiz_start') sourceMap[src].starts.add(e.session_id);
+    if(e.event_type === 'submit') sourceMap[src].submits.add(e.session_id);
+  });
+  const sources = Object.entries(sourceMap)
+    .map(([src, sets]) => ({
+      src,
+      visits: sets.visits.size,
+      starts: sets.starts.size,
+      submits: sets.submits.size
+    }))
+    .sort((a, b) => b.visits - a.visits)
+    .slice(0, 10);
+
+  // === RENDER ===
+  let html = `
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Visits — letzte 7 Tage</div>
+        <div class="stat-value">${visits7d}</div>
+        <div class="stat-caption">${visits30d} in 30 Tagen</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Quiz gestartet</div>
+        <div class="stat-value">${starts7d}</div>
+        <div class="stat-caption">${visits7d > 0 ? Math.round(starts7d/visits7d*100) : 0}% von Visits</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Submits</div>
+        <div class="stat-value">${submits7d}</div>
+        <div class="stat-caption">${submits30d} in 30 Tagen</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Conversion (Start → Submit)</div>
+        <div class="stat-value">${convRate7d}%</div>
+        <div class="stat-caption">Visit→Submit: ${convRate30dAll}%</div>
+      </div>
+    </div>
+
+    <div class="content-grid" style="grid-template-columns: 1.5fr 1fr">
+      <div class="content-card">
+        <div class="content-card-title">Funnel (letzte 7 Tage)</div>
+        <div class="analytics-funnel">
+          ${funnelData.map((d, i) => {
+            const widthPct = (d.count / funnelMax) * 100;
+            const prevCount = i > 0 ? funnelData[i-1].count : null;
+            const dropPct = prevCount && prevCount > 0
+              ? Math.round(((d.count - prevCount) / prevCount) * 100)
+              : null;
+            const dropClass = dropPct === null ? '' : (dropPct < -50 ? ' bad' : '');
+            const dropText = dropPct === null ? '' : (dropPct >= 0 ? '+' + dropPct : dropPct) + '%';
+            return `
+              <div class="funnel-row">
+                <div class="label"><strong>${escapeHtml(d.label)}</strong></div>
+                <div class="bar${i > 0 ? ' dim' : ''}" style="width: ${widthPct}%"></div>
+                <div class="count">${d.count}</div>
+                <div class="pct${dropClass}">${dropText}</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+        ${all.length === 0 ? '<div class="empty-state">Noch keine Daten. Sobald Besucher die Site aufrufen, erscheinen hier Stats.</div>' : ''}
+      </div>
+
+      <div class="content-card">
+        <div class="content-card-title">Top Sources (letzte 30 Tage)</div>
+        ${sources.length === 0 ? '<div class="empty-state">Keine Sources erfasst.</div>' : `
+          <table class="source-table">
+            <tr><td style="font-size:0.68rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-weight:600">Source</td><td class="num" style="font-size:0.68rem;text-transform:uppercase;letter-spacing:1px;font-weight:600">Visits</td><td class="num" style="font-size:0.68rem;text-transform:uppercase;letter-spacing:1px;font-weight:600">Starts</td><td class="num" style="font-size:0.68rem;text-transform:uppercase;letter-spacing:1px;font-weight:600">Subs</td></tr>
+            ${sources.map(s => `
+              <tr>
+                <td class="src-name">${escapeHtml(s.src)}</td>
+                <td class="num">${s.visits}</td>
+                <td class="num">${s.starts}</td>
+                <td class="num${s.submits > 0 ? ' highlight' : ''}">${s.submits}</td>
+              </tr>
+            `).join('')}
+          </table>
+        `}
+      </div>
+    </div>
+  `;
+  target.innerHTML = html;
+}
 
 // ==================== QUIZ EDITOR ====================
 let quizSteps = [];
